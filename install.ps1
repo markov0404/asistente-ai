@@ -2,8 +2,6 @@
 #  Asistente AI — Instalador para Windows
 #  Ejecutar en PowerShell como Administrador:
 #    irm https://raw.githubusercontent.com/markov0404/asistente-ai/main/install.ps1 | iex
-#  O:
-#    .\install.ps1
 # ═══════════════════════════════════════════════════════════════════
 
 $ErrorActionPreference = "Stop"
@@ -15,12 +13,12 @@ function Write-Err($msg)  { Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 
 Clear-Host
 Write-Host ""
-Write-Host "  ╔═══════════════════════════════════════════╗" -ForegroundColor White
-Write-Host "  ║         Asistente AI — Instalador         ║" -ForegroundColor White
-Write-Host "  ║     Tu asistente personal con IA local    ║" -ForegroundColor White
-Write-Host "  ╚═══════════════════════════════════════════╝" -ForegroundColor White
+Write-Host "  =============================================" -ForegroundColor Cyan
+Write-Host "          Asistente AI - Instalador            " -ForegroundColor White
+Write-Host "      Tu asistente personal con IA local       " -ForegroundColor Gray
+Write-Host "  =============================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Este instalador va a configurar todo lo necesario:" -ForegroundColor Gray
+Write-Host "  Este instalador va a configurar:" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  1. WSL2 (Windows Subsystem for Linux)" -ForegroundColor Gray
 Write-Host "  2. Ubuntu en WSL" -ForegroundColor Gray
@@ -33,7 +31,7 @@ Read-Host "  Presiona Enter para comenzar"
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Err "Este script necesita ejecutarse como Administrador."
-    Write-Host "  Hace clic derecho en PowerShell -> 'Ejecutar como administrador'" -ForegroundColor Gray
+    Write-Host "  Clic derecho en PowerShell -> 'Ejecutar como administrador'" -ForegroundColor Gray
     Read-Host "  Presiona Enter para salir"
     exit 1
 }
@@ -43,133 +41,145 @@ Write-Step "1/4 — Verificando WSL2"
 
 $wslInstalled = $false
 try {
-    $wslVersion = wsl --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $wslInstalled = $true
-        Write-Ok "WSL2 ya esta instalado"
-    }
+    $null = wsl --version 2>&1
+    if ($LASTEXITCODE -eq 0) { $wslInstalled = $true }
 } catch {}
 
-if (-not $wslInstalled) {
+if ($wslInstalled) {
+    Write-Ok "WSL2 ya esta instalado"
+} else {
     Write-Warn "WSL2 no encontrado. Instalando..."
-    Write-Host "  Esto puede tomar unos minutos y requiere reiniciar." -ForegroundColor Gray
-
-    wsl --install --no-distribution
+    wsl --install --no-distribution 2>&1 | Out-Null
 
     if ($LASTEXITCODE -ne 0) {
-        # Fallback: enable features manually
-        Write-Warn "Habilitando componentes de Windows..."
-        dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-        dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+        dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart | Out-Null
+        dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart | Out-Null
     }
 
     Write-Host ""
-    Write-Host "  ╔═══════════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host "  ║  WSL2 instalado. NECESITAS REINICIAR WINDOWS.    ║" -ForegroundColor Yellow
-    Write-Host "  ║                                                   ║" -ForegroundColor Yellow
-    Write-Host "  ║  Despues de reiniciar, volve a correr:           ║" -ForegroundColor Yellow
-    Write-Host "  ║    .\install.ps1                                  ║" -ForegroundColor Yellow
-    Write-Host "  ╚═══════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host "  WSL2 instalado. NECESITAS REINICIAR WINDOWS." -ForegroundColor Yellow
+    Write-Host "  Despues de reiniciar, volve a ejecutar este instalador." -ForegroundColor Yellow
     Write-Host ""
-    Read-Host "  Presiona Enter para reiniciar"
-    Restart-Computer -Force
+    $restart = Read-Host "  Reiniciar ahora? (S/n)"
+    if ($restart -ne "n") { Restart-Computer -Force }
     exit 0
 }
 
 # ── Step 2: Ubuntu ───────────────────────────────────────────────
 Write-Step "2/4 — Verificando Ubuntu en WSL"
 
-$distros = wsl -l -q 2>&1 | Where-Object { $_ -match "Ubuntu" }
+# Check if any Ubuntu distro exists
+$hasUbuntu = $false
+try {
+    $distroList = wsl -l -q 2>&1
+    foreach ($line in $distroList) {
+        if ($line -match "Ubuntu") { $hasUbuntu = $true; break }
+    }
+} catch {}
 
-if ($distros) {
+if ($hasUbuntu) {
     Write-Ok "Ubuntu ya esta instalado en WSL"
 } else {
     Write-Warn "Instalando Ubuntu en WSL..."
-    wsl --install -d Ubuntu
-    Write-Ok "Ubuntu instalado"
+    Write-Host "  Esto puede tardar unos minutos descargando..." -ForegroundColor Gray
+
+    # Use --no-launch to prevent interactive session hijacking
+    wsl --install -d Ubuntu --no-launch 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+
+    Write-Ok "Ubuntu descargado"
     Write-Host ""
-    Write-Host "  Se va a abrir una ventana de Ubuntu para crear tu usuario." -ForegroundColor Gray
-    Write-Host "  Cuando termines, volve aca y presiona Enter." -ForegroundColor Gray
-    Read-Host "  Presiona Enter para continuar"
+    Write-Host "  Ahora necesitas crear tu usuario de Linux." -ForegroundColor White
+    Write-Host "  Se va a abrir Ubuntu. Crea un nombre de usuario y contrasena." -ForegroundColor White
+    Write-Host "  Cuando termine y veas el prompt (ej: dani@PC:~$), escribi 'exit' y Enter." -ForegroundColor White
+    Write-Host ""
+    Read-Host "  Presiona Enter para abrir Ubuntu"
+
+    # Launch Ubuntu interactively for user creation, then it returns
+    Start-Process -FilePath "wsl.exe" -ArgumentList "-d","Ubuntu" -Wait -NoNewWindow
+
+    Write-Ok "Usuario de Ubuntu creado"
 }
 
 # ── Step 3: Docker ───────────────────────────────────────────────
 Write-Step "3/4 — Verificando Docker en WSL"
 
-$dockerCheck = wsl -d Ubuntu -- bash -c "docker --version 2>/dev/null" 2>&1
+$dockerOk = $false
+try {
+    $dockerOut = wsl -d Ubuntu -- bash -c "docker --version 2>/dev/null"
+    if ($dockerOut -match "Docker version") { $dockerOk = $true }
+} catch {}
 
-if ($dockerCheck -match "Docker version") {
+if ($dockerOk) {
     Write-Ok "Docker ya esta instalado en WSL"
 } else {
-    Write-Warn "Instalando Docker en WSL..."
+    Write-Warn "Instalando Docker en WSL (esto tarda 1-2 minutos)..."
 
-    $dockerScript = @'
-set -e
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-# Add user to docker group
-sudo usermod -aG docker $USER
-# Start Docker
-sudo service docker start
-# Install Docker Compose v2 plugin
-mkdir -p ~/.docker/cli-plugins
-curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" -o ~/.docker/cli-plugins/docker-compose
-chmod +x ~/.docker/cli-plugins/docker-compose
-echo "Docker instalado OK"
-'@
+    # Install docker via apt (avoids get.docker.com sleep/WSL warning issues)
+    $installCmd = @"
+sudo apt-get update -qq && \
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io > /dev/null 2>&1 && \
+sudo usermod -aG docker `$USER && \
+sudo service docker start && \
+mkdir -p ~/.docker/cli-plugins && \
+curl -sSL 'https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64' -o ~/.docker/cli-plugins/docker-compose && \
+chmod +x ~/.docker/cli-plugins/docker-compose && \
+echo 'DOCKER_OK'
+"@
 
-    $dockerScript | wsl -d Ubuntu -- bash
+    Write-Host ""
+    Write-Host "  Te va a pedir la contrasena de Linux que creaste recien." -ForegroundColor White
+    Write-Host "  (No vas a ver los caracteres al escribir, es normal)" -ForegroundColor Gray
+    Write-Host ""
 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Ok "Docker instalado en WSL"
+    $result = wsl -d Ubuntu -- bash -c $installCmd 2>&1
+    $resultStr = $result -join "`n"
+
+    if ($resultStr -match "DOCKER_OK") {
+        Write-Ok "Docker + Docker Compose instalados"
     } else {
-        Write-Err "Error instalando Docker. Intenta instalar Docker Desktop desde https://docker.com/products/docker-desktop/"
-        Read-Host "Presiona Enter para continuar de todas formas"
+        Write-Err "Hubo un problema instalando Docker."
+        Write-Host "  Output: $resultStr" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "  Alternativa: instala Docker Desktop desde https://docker.com/products/docker-desktop/" -ForegroundColor Yellow
+        Read-Host "  Presiona Enter para continuar de todas formas"
     }
 }
 
-# ── Step 4: Clone and setup ─────────────────────────────────────
+# ── Step 4: Clone and run setup ──────────────────────────────────
 Write-Step "4/4 — Instalando Asistente AI"
 
-$repoUrl = "https://github.com/markov0404/asistente-ai.git"
-$installDir = "~/asistente-ai"
+Write-Host ""
+Write-Host "  Descargando y configurando el asistente..." -ForegroundColor Gray
+Write-Host "  Se va a abrir el wizard interactivo de configuracion." -ForegroundColor Gray
+Write-Host ""
+Read-Host "  Presiona Enter para continuar"
 
-$setupScript = @"
-set -e
-# Ensure docker is running
-sudo service docker start 2>/dev/null || true
-# Clone repo if not exists
-if [ ! -d "$installDir" ]; then
-    git clone $repoUrl $installDir
-fi
-cd $installDir
-# Make sure docker service is running
-sudo service docker start
-# Run the interactive setup wizard
-./setup.sh
+# Run the clone + setup inside WSL with interactive TTY
+# newgrp docker ensures docker works without logout
+$setupCmd = @"
+sudo service docker start 2>/dev/null;
+if [ ! -d ~/asistente-ai ]; then
+  git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai;
+fi;
+cd ~/asistente-ai;
+sg docker -c './setup.sh'
 "@
 
-Write-Host ""
-Write-Host "  Ahora se va a abrir el wizard de instalacion en WSL." -ForegroundColor Gray
-Write-Host "  Segui las instrucciones interactivas." -ForegroundColor Gray
-Write-Host ""
-Read-Host "  Presiona Enter para comenzar el setup"
-
-wsl -d Ubuntu -- bash -c $setupScript
+wsl -d Ubuntu -- bash -ic $setupCmd
 
 # ── Done ─────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  ╔═══════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║         Asistente AI — Instalacion completa!      ║" -ForegroundColor Green
-Write-Host "  ╚═══════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  =============================================" -ForegroundColor Green
+Write-Host "      Asistente AI - Instalacion completa!     " -ForegroundColor Green
+Write-Host "  =============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Tu asistente esta corriendo. Enviale un mensaje por WhatsApp!" -ForegroundColor White
 Write-Host ""
 Write-Host "  Panel de control: http://127.0.0.1:18789/" -ForegroundColor Gray
 Write-Host ""
-Write-Host "  Comandos utiles (en WSL/Ubuntu):" -ForegroundColor Gray
-Write-Host "    cd ~/asistente-ai && docker compose logs -f    # Ver logs" -ForegroundColor DarkGray
-Write-Host "    cd ~/asistente-ai && docker compose restart    # Reiniciar" -ForegroundColor DarkGray
-Write-Host "    cd ~/asistente-ai && ./uninstall.sh            # Desinstalar" -ForegroundColor DarkGray
+Write-Host "  Comandos utiles:" -ForegroundColor Gray
+Write-Host "    Detener:     wsl -d Ubuntu -- bash -c 'cd ~/asistente-ai && docker compose down'" -ForegroundColor DarkGray
+Write-Host "    Reanudar:    wsl -d Ubuntu -- bash -c 'cd ~/asistente-ai && docker compose up -d openclaw-gateway'" -ForegroundColor DarkGray
+Write-Host "    Desinstalar: wsl -d Ubuntu -- bash -c 'cd ~/asistente-ai && ./uninstall.sh'" -ForegroundColor DarkGray
 Write-Host ""
 Read-Host "  Presiona Enter para cerrar"
