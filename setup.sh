@@ -193,17 +193,46 @@ echo ""
 echo -e "  Configura las herramientas que quieras. Podes agregar mas despues."
 echo ""
 
-# — Brave Search —
+# — Web search —
 BRAVE_KEY=""
-if confirm "Activar busqueda web (Brave Search)?"; then
-    echo ""
-    echo -e "  Obtene tu API key gratis en ${CYAN}https://api.search.brave.com/${NC}"
-    echo ""
-    ask_secret "Brave API Key" BRAVE_KEY
-    [ -n "$BRAVE_KEY" ] && ok "Brave Search configurado" || warn "Sin key. Se configura despues."
-else
-    echo -e "  ${DIM}Busqueda web desactivada. Podes activarla despues.${NC}"
-fi
+INSTALL_BROWSER="y"
+echo -e "  ${BOLD}Busqueda web — como queres que busque en internet?${NC}"
+echo ""
+echo -e "  ${CYAN}1.${NC} Navegador (Chromium) ${DIM}— busca en Google como vos, sin API key (Recomendado)${NC}"
+echo -e "  ${CYAN}2.${NC} Brave Search API ${DIM}— mas rapido pero necesita API key${NC}"
+echo -e "  ${CYAN}3.${NC} Ambos ${DIM}— Brave para busquedas rapidas + browser para navegar sitios${NC}"
+echo -e "  ${CYAN}4.${NC} Saltar ${DIM}— configuro despues${NC}"
+echo ""
+echo -ne "  ${BOLD}Opcion${NC} ${DIM}[1]${NC}: "
+read -r SEARCH_CHOICE
+SEARCH_CHOICE="${SEARCH_CHOICE:-1}"
+
+case "$SEARCH_CHOICE" in
+    1)
+        INSTALL_BROWSER="y"
+        ok "Navegador Chromium activado — puede buscar en Google y navegar sitios"
+        ;;
+    2)
+        INSTALL_BROWSER="n"
+        echo ""
+        echo -e "  Obtene tu API key gratis en ${CYAN}https://api.search.brave.com/${NC}"
+        echo ""
+        ask_secret "Brave API Key" BRAVE_KEY
+        [ -n "$BRAVE_KEY" ] && ok "Brave Search configurado" || warn "Sin key."
+        ;;
+    3)
+        INSTALL_BROWSER="y"
+        echo ""
+        echo -e "  Obtene tu API key gratis en ${CYAN}https://api.search.brave.com/${NC}"
+        echo ""
+        ask_secret "Brave API Key" BRAVE_KEY
+        [ -n "$BRAVE_KEY" ] && ok "Brave Search + Navegador activados" || ok "Navegador activado, Brave sin key"
+        ;;
+    *)
+        INSTALL_BROWSER="n"
+        echo -e "  ${DIM}Busqueda web desactivada. Podes activarla despues.${NC}"
+        ;;
+esac
 
 # — GitHub —
 GH_KEY=""
@@ -298,7 +327,7 @@ cat > "$MEMORY_FILE" <<EOF
 
 ## Herramientas Disponibles
 - WhatsApp: canal principal de comunicacion (numero: ${WA_NUMBER})
-- Busqueda web: $([ -n "$BRAVE_KEY" ] && echo "Brave Search API (activo)" || echo "Brave Search (pendiente de configurar)")
+- Busqueda web: $([ "$INSTALL_BROWSER" = "y" ] && echo "Navegador Chromium (activo)" || echo "No configurado")$([ -n "$BRAVE_KEY" ] && echo " + Brave Search API (activo)")
 - GitHub: $([ -n "$GH_KEY" ] && echo "gh CLI (activo)" || echo "gh CLI (pendiente de configurar)")
 - Email: $([ "$SETUP_EMAIL" = "y" ] && echo "Gmail + Outlook via himalaya (pendiente de configurar)" || echo "No configurado")
 - Calendar: $([ "$SETUP_CALENDAR" = "y" ] && echo "Google Calendar via gog (pendiente de configurar)" || echo "No configurado")
@@ -335,10 +364,19 @@ echo ""
 
 if confirm "Iniciar el build ahora?"; then
     echo ""
+    # Determine build args based on choices
+    BUILD_EXTENSIONS="whatsapp memory-core"
+    [ -n "$BRAVE_KEY" ] && BUILD_EXTENSIONS="$BUILD_EXTENSIONS brave"
+    BROWSER_ARG=""
+    [ "$INSTALL_BROWSER" = "y" ] && BROWSER_ARG="--build-arg OPENCLAW_INSTALL_BROWSER=1"
+
     echo -e "  ${DIM}Construyendo imagen base...${NC}"
+    echo -e "  ${DIM}Extensiones: ${BUILD_EXTENSIONS}${NC}"
+    [ "$INSTALL_BROWSER" = "y" ] && echo -e "  ${DIM}Navegador: Chromium (esto agrega ~400MB)${NC}"
     DOCKER_BUILDKIT=1 docker build -t openclaw:local \
-        --build-arg OPENCLAW_EXTENSIONS="whatsapp brave memory-core" \
+        --build-arg OPENCLAW_EXTENSIONS="$BUILD_EXTENSIONS" \
         --build-arg OPENCLAW_DOCKER_APT_PACKAGES="git curl jq" \
+        $BROWSER_ARG \
         -f "$REPO_DIR/Dockerfile" "$REPO_DIR"
     ok "Imagen base construida"
 

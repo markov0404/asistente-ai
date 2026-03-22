@@ -1,5 +1,6 @@
 # Asistente AI - Custom layer on top of OpenClaw base image
-# Adds CLI tools for email, GitHub, calendar, and skill discovery
+# Adds CLI tools for email, GitHub, and browser for web search
+# Base image must be built with OPENCLAW_INSTALL_BROWSER=1 for Chromium
 
 FROM openclaw:local
 
