@@ -113,32 +113,29 @@ if ($dockerOk) {
     Write-Ok "Docker ya esta instalado en WSL"
 } else {
     Write-Warn "Instalando Docker en WSL (esto tarda 1-2 minutos)..."
-
-    # Install docker via apt (avoids get.docker.com sleep/WSL warning issues)
-    $installCmd = @"
-sudo apt-get update -qq && \
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io > /dev/null 2>&1 && \
-sudo usermod -aG docker `$USER && \
-sudo service docker start && \
-mkdir -p ~/.docker/cli-plugins && \
-curl -sSL 'https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64' -o ~/.docker/cli-plugins/docker-compose && \
-chmod +x ~/.docker/cli-plugins/docker-compose && \
-echo 'DOCKER_OK'
-"@
+    Write-Host ""
+    Write-Host "  Necesito tu contrasena de Linux (la que creaste en Ubuntu)." -ForegroundColor White
+    $linuxPass = Read-Host "  Contrasena de Linux" -AsSecureString
+    $plainPass = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($linuxPass))
 
     Write-Host ""
-    Write-Host "  Te va a pedir la contrasena de Linux que creaste recien." -ForegroundColor White
-    Write-Host "  (No vas a ver los caracteres al escribir, es normal)" -ForegroundColor Gray
-    Write-Host ""
+    Write-Host "  Instalando paquetes... (esto tarda 1-2 minutos)" -ForegroundColor Gray
+
+    # Use echo password | sudo -S to avoid interactive sudo prompt
+    # Install docker.io via apt (avoids get.docker.com sleep/WSL issues)
+    $installCmd = "echo '${plainPass}' | sudo -S apt-get update -qq 2>/dev/null && echo '${plainPass}' | sudo -S DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io curl git >/dev/null 2>&1 && echo '${plainPass}' | sudo -S usermod -aG docker `$USER && echo '${plainPass}' | sudo -S service docker start >/dev/null 2>&1 && mkdir -p ~/.docker/cli-plugins && curl -sSL 'https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64' -o ~/.docker/cli-plugins/docker-compose && chmod +x ~/.docker/cli-plugins/docker-compose && echo 'DOCKER_OK'"
 
     $result = wsl -d Ubuntu -- bash -c $installCmd 2>&1
     $resultStr = $result -join "`n"
+
+    # Clear password from memory
+    $plainPass = $null
 
     if ($resultStr -match "DOCKER_OK") {
         Write-Ok "Docker + Docker Compose instalados"
     } else {
         Write-Err "Hubo un problema instalando Docker."
-        Write-Host "  Output: $resultStr" -ForegroundColor DarkGray
+        Write-Host "  $resultStr" -ForegroundColor DarkGray
         Write-Host ""
         Write-Host "  Alternativa: instala Docker Desktop desde https://docker.com/products/docker-desktop/" -ForegroundColor Yellow
         Read-Host "  Presiona Enter para continuar de todas formas"
@@ -154,18 +151,14 @@ Write-Host "  Se va a abrir el wizard interactivo de configuracion." -Foreground
 Write-Host ""
 Read-Host "  Presiona Enter para continuar"
 
-# Run the clone + setup inside WSL with interactive TTY
-# newgrp docker ensures docker works without logout
-$setupCmd = @"
-sudo service docker start 2>/dev/null;
-if [ ! -d ~/asistente-ai ]; then
-  git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai;
-fi;
-cd ~/asistente-ai;
-sg docker -c './setup.sh'
-"@
+# Prepare: start docker and clone repo (non-interactive, use saved password if needed)
+Write-Host "  Preparando..." -ForegroundColor Gray
+$prepCmd = "echo '${plainPass}' | sudo -S service docker start 2>/dev/null; if [ ! -d ~/asistente-ai ]; then git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai; fi; echo 'PREP_OK'"
+$prepResult = wsl -d Ubuntu -- bash -c $prepCmd 2>&1
+$plainPass = $null  # clear password
 
-wsl -d Ubuntu -- bash -ic $setupCmd
+# Run setup wizard interactively (needs TTY for user input)
+wsl -d Ubuntu -- bash -c "cd ~/asistente-ai && sg docker -c './setup.sh'"
 
 # ── Done ─────────────────────────────────────────────────────────
 Write-Host ""
