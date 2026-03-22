@@ -127,7 +127,7 @@ if ($dockerOk) {
     Write-Host ""
     Write-Host "  Instalando paquetes..." -ForegroundColor Gray
 
-    $installCmd = "echo '${plainPass}' | sudo -S apt-get update -qq 2>/dev/null && echo '${plainPass}' | sudo -S DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io curl git >/dev/null 2>&1 && echo '${plainPass}' | sudo -S usermod -aG docker `$USER && echo '${plainPass}' | sudo -S service docker start >/dev/null 2>&1 && mkdir -p ~/.docker/cli-plugins && curl -sSL 'https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64' -o ~/.docker/cli-plugins/docker-compose && chmod +x ~/.docker/cli-plugins/docker-compose && echo 'DOCKER_OK'"
+    $installCmd = "echo '${plainPass}' | sudo -S apt-get update -qq 2>/dev/null && echo '${plainPass}' | sudo -S DEBIAN_FRONTEND=noninteractive apt-get install -y -qq docker.io curl git >/dev/null 2>&1 && echo '${plainPass}' | sudo -S usermod -aG docker `$USER && echo '${plainPass}' | sudo -S service docker start >/dev/null 2>&1 && mkdir -p ~/.docker/cli-plugins && curl -sSL 'https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64' -o ~/.docker/cli-plugins/docker-compose && chmod +x ~/.docker/cli-plugins/docker-compose && curl -sSL 'https://github.com/docker/buildx/releases/latest/download/buildx-linux-amd64' -o ~/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx && echo 'DOCKER_OK'"
 
     $ErrorActionPreference = "Continue"
     $result = wsl -d Ubuntu -- bash -c $installCmd 2>&1

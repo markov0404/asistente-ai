@@ -322,6 +322,18 @@ echo ""
 
 if confirm "Iniciar el build ahora?"; then
     echo ""
+    # Ensure buildx is available (docker.io from apt doesn't include it)
+    if ! docker buildx version >/dev/null 2>&1; then
+        echo -e "  ${DIM}Instalando Docker Buildx...${NC}"
+        mkdir -p ~/.docker/cli-plugins
+        curl -sSL "https://github.com/docker/buildx/releases/latest/download/buildx-$(uname -s | tr '[:upper:]' '[:lower:]').$(uname -m)" \
+            -o ~/.docker/cli-plugins/docker-buildx 2>/dev/null \
+        || curl -sSL "https://github.com/docker/buildx/releases/latest/download/buildx-linux-amd64" \
+            -o ~/.docker/cli-plugins/docker-buildx
+        chmod +x ~/.docker/cli-plugins/docker-buildx
+        ok "Buildx instalado"
+    fi
+
     # Determine build args based on choices
     BUILD_EXTENSIONS="whatsapp memory-core"
     [ -n "$BRAVE_KEY" ] && BUILD_EXTENSIONS="$BUILD_EXTENSIONS brave"
