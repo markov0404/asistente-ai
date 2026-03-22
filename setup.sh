@@ -115,7 +115,16 @@ ask "Tu profesion (ej: ingeniero, abogado, medico)" USER_PROFESSION
 ask "Tu zona horaria" USER_TZ "America/Montevideo"
 ask "Idioma principal" USER_LANG "es"
 
-ok "Perfil: $USER_NAME, $USER_PROFESSION"
+# Check if default port is available, suggest alternative if not
+DEFAULT_PORT=18789
+if command -v ss >/dev/null 2>&1 && ss -tlnp 2>/dev/null | grep -q ":${DEFAULT_PORT} "; then
+    warn "Puerto ${DEFAULT_PORT} esta ocupado. Usando 18800."
+    DEFAULT_PORT=18800
+fi
+ask "Puerto del gateway" GATEWAY_PORT "$DEFAULT_PORT"
+BRIDGE_PORT=$((GATEWAY_PORT + 1))
+
+ok "Perfil: $USER_NAME, $USER_PROFESSION (puerto: $GATEWAY_PORT)"
 
 # ═══════════════════════════════════════════════════════════════════
 #  STEP 2: Claude + WhatsApp (se configuran post-build)
@@ -251,6 +260,8 @@ OPENCLAW_GATEWAY_TOKEN=${GATEWAY_TOKEN}
 OPENCLAW_CONFIG_DIR=${HOME}/.openclaw
 OPENCLAW_WORKSPACE_DIR=${HOME}/.openclaw/workspace
 OPENCLAW_TZ=${USER_TZ}
+OPENCLAW_GATEWAY_PORT=${GATEWAY_PORT}
+OPENCLAW_BRIDGE_PORT=${BRIDGE_PORT}
 
 # Claude
 CLAUDE_AI_SESSION_KEY=${CLAUDE_SESSION_KEY}
@@ -380,7 +391,7 @@ if confirm "Iniciar el build ahora?"; then
     echo -ne "  Esperando que arranque"
     HEALTHY=false
     for i in $(seq 1 20); do
-        if curl -fsS http://127.0.0.1:18789/healthz >/dev/null 2>&1; then
+        if curl -fsS http://127.0.0.1:${GATEWAY_PORT}/healthz >/dev/null 2>&1; then
             echo ""
             ok "Gateway saludable"
             HEALTHY=true
@@ -423,7 +434,7 @@ banner "Setup completo!"
 echo ""
 echo -e "  ${GREEN}Tu asistente esta listo.${NC} Enviale un mensaje por WhatsApp!"
 echo ""
-echo -e "  ${BOLD}Panel de control:${NC}  http://127.0.0.1:18789/"
+echo -e "  ${BOLD}Panel de control:${NC}  http://127.0.0.1:${GATEWAY_PORT}/"
 echo -e "  ${BOLD}Token de acceso:${NC}   ${DIM}${GATEWAY_TOKEN:0:12}...${NC}"
 echo -e "  ${BOLD}Ver logs:${NC}          docker compose logs -f openclaw-gateway"
 echo -e "  ${BOLD}Reiniciar:${NC}         docker compose restart openclaw-gateway"
