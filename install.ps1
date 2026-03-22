@@ -152,7 +152,7 @@ Write-Host ""
 Read-Host "  Presiona Enter para continuar"
 
 Write-Host "  Preparando..." -ForegroundColor Gray
-$prepCmd = "echo '${plainPass}' | sudo -S service docker start 2>/dev/null; if [ ! -d ~/asistente-ai ]; then git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai 2>&1; fi; echo 'PREP_OK'"
+$prepCmd = "echo '${plainPass}' | sudo -S service docker start 2>/dev/null; if [ -d ~/asistente-ai ]; then cd ~/asistente-ai && git pull 2>&1; else git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai 2>&1; fi; echo 'PREP_OK'"
 $plainPass = $null
 
 $ErrorActionPreference = "Continue"
