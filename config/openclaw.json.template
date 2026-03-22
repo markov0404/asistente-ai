@@ -1,0 +1,42 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "lan"
+  },
+
+  "channels": {
+    "whatsapp": {
+      "dmPolicy": "allowlist",
+      "allowFrom": ["+598XXXXXXXXX"],
+      "groupPolicy": "disabled",
+      "sendReadReceipts": true
+    }
+  },
+
+  "plugins": {
+    "entries": {
+      "brave": {
+        "config": {
+          "webSearch": {
+            "apiKey": { "source": "env", "id": "BRAVE_API_KEY" }
+          }
+        }
+      }
+    },
+    "slots": {
+      "memory": "memory-core"
+    }
+  },
+
+  "agents": {
+    "defaults": {
+      "workspace": "/home/node/.openclaw/workspace",
+      "userTimezone": "America/Montevideo",
+      "compaction": {
+        "memoryFlush": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
