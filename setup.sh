@@ -118,72 +118,30 @@ ask "Idioma principal" USER_LANG "es"
 ok "Perfil: $USER_NAME, $USER_PROFESSION"
 
 # ═══════════════════════════════════════════════════════════════════
-#  STEP 2: Claude (cerebro de IA)
+#  STEP 2: Claude + WhatsApp (se configuran post-build)
 # ═══════════════════════════════════════════════════════════════════
-banner "2/5 — Configurar Claude (cerebro de IA)"
+banner "2/5 — Claude y WhatsApp"
 echo ""
-echo -e "  Claude es el modelo de IA que usa tu asistente para pensar."
-echo -e "  Necesitas una forma de conectarte. Elige una opcion:"
+echo -e "  Claude (tu IA) y WhatsApp se configuran despues del build."
+echo -e "  El asistente te va a abrir el navegador para que inicies sesion"
+echo -e "  en Claude, y te va a mostrar un QR para conectar WhatsApp."
+echo -e "  ${DIM}Todo interactivo, no necesitas copiar nada manualmente.${NC}"
 echo ""
-echo -e "  ${CYAN}1.${NC} Claude via sesion web ${DIM}(usa tu cuenta Pro/Team existente, gratis)${NC}"
-echo -e "  ${CYAN}2.${NC} Claude via API key ${DIM}(de pago por uso, mas estable)${NC}"
-echo -e "  ${CYAN}3.${NC} Saltar ${DIM}(configurar despues)${NC}"
-echo ""
-echo -ne "  ${BOLD}Opcion${NC} ${DIM}[1]${NC}: "
-read -r CLAUDE_CHOICE
-CLAUDE_CHOICE="${CLAUDE_CHOICE:-1}"
+ok "Se configuraran en el paso 5"
 
 CLAUDE_SESSION_KEY=""
 ANTHROPIC_API_KEY=""
 
-case "$CLAUDE_CHOICE" in
-    1)
-        echo ""
-        echo -e "  ${BOLD}Como obtener tu Session Key:${NC}"
-        echo ""
-        echo -e "  1. Abre ${CYAN}https://claude.ai${NC} en tu navegador e inicia sesion"
-        echo -e "  2. Presiona ${BOLD}F12${NC} para abrir DevTools"
-        echo -e "  3. Ve a la pestana ${BOLD}Application${NC} (o ${BOLD}Almacenamiento${NC})"
-        echo -e "  4. En el panel izquierdo: ${BOLD}Cookies → https://claude.ai${NC}"
-        echo -e "  5. Busca la cookie llamada ${BOLD}sessionKey${NC}"
-        echo -e "  6. Copia el valor completo (empieza con ${DIM}sk-ant-sid01-...${NC})"
-        echo ""
-        ask_secret "Pega tu Session Key aqui" CLAUDE_SESSION_KEY
-        if [ -n "$CLAUDE_SESSION_KEY" ]; then
-            ok "Session Key guardada"
-        else
-            warn "Vacio. Podras configurarlo despues en .env"
-        fi
-        ;;
-    2)
-        echo ""
-        echo -e "  Obtene tu API key en ${CYAN}https://console.anthropic.com/settings/keys${NC}"
-        echo ""
-        ask_secret "Tu Anthropic API Key (sk-ant-...)" ANTHROPIC_API_KEY
-        if [ -n "$ANTHROPIC_API_KEY" ]; then
-            ok "API Key guardada"
-        else
-            warn "Vacio. Podras configurarlo despues en .env"
-        fi
-        ;;
-    *)
-        warn "Claude se configurara despues. Edita .env cuando estes listo."
-        ;;
-esac
-
 # ═══════════════════════════════════════════════════════════════════
-#  STEP 3: WhatsApp
+#  STEP 3: WhatsApp número
 # ═══════════════════════════════════════════════════════════════════
-banner "3/5 — Configurar WhatsApp"
+banner "3/5 — Tu numero de WhatsApp"
 echo ""
-echo -e "  WhatsApp es tu canal principal para hablar con el asistente."
 echo -e "  Necesitamos tu numero para la allowlist de seguridad."
+echo -e "  Solo vos vas a poder hablar con el asistente."
 echo ""
-ask "Tu numero de WhatsApp con codigo de pais (ej: +59899123456)" WA_NUMBER "+598"
-
-ok "WhatsApp configurado para $WA_NUMBER"
-echo ""
-echo -e "  ${DIM}El escaneo QR se hara al final, cuando el gateway este corriendo.${NC}"
+ask "Tu numero con codigo de pais (ej: +59899123456)" WA_NUMBER "+598"
+ok "Allowlist: $WA_NUMBER"
 
 # ═══════════════════════════════════════════════════════════════════
 #  STEP 4: Herramientas
@@ -389,6 +347,19 @@ if confirm "Iniciar el build ahora?"; then
     # Source env and start
     set -a; source "$ENV_FILE"; set +a
     cd "$REPO_DIR"
+
+    # --- Claude login (interactive, opens browser) ---
+    echo ""
+    banner "Configurar Claude (se abre el navegador)"
+    echo ""
+    echo -e "  Ahora se va a abrir tu navegador para iniciar sesion en Claude."
+    echo -e "  Segui las instrucciones en pantalla."
+    echo ""
+    pause
+    docker compose run --rm openclaw-cli onboard
+    ok "Claude configurado"
+
+    # Start gateway
     docker compose up -d openclaw-gateway
     ok "Gateway iniciado"
 
@@ -410,23 +381,18 @@ if confirm "Iniciar el build ahora?"; then
         warn "Gateway no responde. Verifica: docker compose logs openclaw-gateway"
     fi
 
-    # WhatsApp QR login
+    # --- WhatsApp QR login ---
     echo ""
-    if confirm "Conectar WhatsApp ahora? (necesitas tu telefono a mano)"; then
-        echo ""
-        echo -e "  ${BOLD}Instrucciones:${NC}"
-        echo -e "  1. Abre WhatsApp en tu telefono"
-        echo -e "  2. Ve a ${BOLD}Configuracion → Dispositivos enlazados → Enlazar dispositivo${NC}"
-        echo -e "  3. Escanea el codigo QR que aparecera a continuacion"
-        echo ""
-        pause
-        docker compose run --rm openclaw-cli channels login --channel whatsapp
-        ok "WhatsApp conectado!"
-    else
-        echo ""
-        echo -e "  ${DIM}Para conectar WhatsApp despues:${NC}"
-        echo -e "  ${BOLD}cd $REPO_DIR && docker compose run --rm openclaw-cli channels login --channel whatsapp${NC}"
-    fi
+    banner "Conectar WhatsApp"
+    echo ""
+    echo -e "  Ahora vamos a conectar WhatsApp."
+    echo -e "  1. Abre WhatsApp en tu telefono"
+    echo -e "  2. Ve a ${BOLD}Configuracion → Dispositivos enlazados → Enlazar dispositivo${NC}"
+    echo -e "  3. Escanea el codigo QR que aparecera a continuacion"
+    echo ""
+    pause
+    docker compose run --rm openclaw-cli channels login --channel whatsapp
+    ok "WhatsApp conectado!"
 else
     echo ""
     echo -e "  Para construir y levantar despues:"
