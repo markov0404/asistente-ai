@@ -153,8 +153,10 @@ Read-Host "  Presiona Enter para continuar"
 
 # Prepare: start docker and clone repo (non-interactive, use saved password if needed)
 Write-Host "  Preparando..." -ForegroundColor Gray
-$prepCmd = "echo '${plainPass}' | sudo -S service docker start 2>/dev/null; if [ ! -d ~/asistente-ai ]; then git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai; fi; echo 'PREP_OK'"
+$prepCmd = "echo '${plainPass}' | sudo -S service docker start 2>/dev/null; if [ ! -d ~/asistente-ai ]; then git clone https://github.com/markov0404/asistente-ai.git ~/asistente-ai 2>&1; fi; echo 'PREP_OK'"
+$ErrorActionPreference = "Continue"
 $prepResult = wsl -d Ubuntu -- bash -c $prepCmd 2>&1
+$ErrorActionPreference = "Stop"
 $plainPass = $null  # clear password
 
 # Run setup wizard interactively (needs TTY for user input)
