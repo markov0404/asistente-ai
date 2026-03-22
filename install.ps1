@@ -4,26 +4,25 @@
 #    irm https://raw.githubusercontent.com/markov0404/asistente-ai/main/install.ps1 | iex
 # ═══════════════════════════════════════════════════════════════════
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
-function Write-Step($msg) { Write-Host "`n>>> $msg" -ForegroundColor Cyan }
+function Write-Step($msg) { Write-Host ""; Write-Host ">>> $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "  [OK] $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "  [!] $msg" -ForegroundColor Yellow }
 function Write-Err($msg)  { Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 
 Clear-Host
 Write-Host ""
-Write-Host "  =============================================" -ForegroundColor Cyan
-Write-Host "          Asistente AI - Instalador            " -ForegroundColor White
-Write-Host "      Tu asistente personal con IA local       " -ForegroundColor Gray
-Write-Host "  =============================================" -ForegroundColor Cyan
+Write-Host "  Asistente AI - Instalador" -ForegroundColor Cyan
+Write-Host "  Tu asistente personal con IA local" -ForegroundColor Gray
+Write-Host "  ---------------------------------" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Este instalador va a configurar:" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  1. WSL2 (Windows Subsystem for Linux)" -ForegroundColor Gray
-Write-Host "  2. Ubuntu en WSL" -ForegroundColor Gray
-Write-Host "  3. Docker dentro de WSL" -ForegroundColor Gray
-Write-Host "  4. El asistente (setup interactivo)" -ForegroundColor Gray
+Write-Host "    1. WSL2 (Windows Subsystem for Linux)" -ForegroundColor Gray
+Write-Host "    2. Ubuntu en WSL" -ForegroundColor Gray
+Write-Host "    3. Docker dentro de WSL" -ForegroundColor Gray
+Write-Host "    4. El asistente (setup interactivo)" -ForegroundColor Gray
 Write-Host ""
 Read-Host "  Presiona Enter para comenzar"
 
@@ -164,9 +163,9 @@ wsl -d Ubuntu -- bash -c "cd ~/asistente-ai && sg docker -c './setup.sh'"
 
 # ── Done ─────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  =============================================" -ForegroundColor Green
-Write-Host "      Asistente AI - Instalacion completa!     " -ForegroundColor Green
-Write-Host "  =============================================" -ForegroundColor Green
+Write-Host "  ---------------------------------" -ForegroundColor Green
+Write-Host "  Asistente AI - Instalacion completa!" -ForegroundColor Green
+Write-Host "  ---------------------------------" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Tu asistente esta corriendo. Enviale un mensaje por WhatsApp!" -ForegroundColor White
 Write-Host ""
