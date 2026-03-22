@@ -326,10 +326,11 @@ if confirm "Iniciar el build ahora?"; then
     if ! docker buildx version >/dev/null 2>&1; then
         echo -e "  ${DIM}Instalando Docker Buildx...${NC}"
         mkdir -p ~/.docker/cli-plugins
-        curl -sSL "https://github.com/docker/buildx/releases/latest/download/buildx-$(uname -s | tr '[:upper:]' '[:lower:]').$(uname -m)" \
-            -o ~/.docker/cli-plugins/docker-buildx 2>/dev/null \
-        || curl -sSL "https://github.com/docker/buildx/releases/latest/download/buildx-linux-amd64" \
-            -o ~/.docker/cli-plugins/docker-buildx
+        ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+        BUILDX_VER=$(curl -sI "https://github.com/docker/buildx/releases/latest" | grep -i "location:" | grep -oP 'v[\d.]+')
+        BUILDX_VER="${BUILDX_VER:-v0.32.1}"
+        BUILDX_URL="https://github.com/docker/buildx/releases/download/${BUILDX_VER}/buildx-${BUILDX_VER}.linux-${ARCH}"
+        curl -sSL "$BUILDX_URL" -o ~/.docker/cli-plugins/docker-buildx
         chmod +x ~/.docker/cli-plugins/docker-buildx
         ok "Buildx instalado"
     fi
